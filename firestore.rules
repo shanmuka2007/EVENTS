@@ -1,0 +1,62 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Global Safety Net: Default Deny All
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Main Security Primitives
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && 
+             request.auth.token.email == 'guturuhemashanmuka@gmail.com' && 
+             request.auth.token.email_verified == true;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // Event entity validation
+    function isValidEvent(data) {
+      return data.id is string && data.id.size() <= 128 &&
+             data.title is string && data.title.size() <= 200 &&
+             data.headline is string && data.headline.size() <= 500 &&
+             data.description is string && data.description.size() <= 1000 &&
+             data.longDescription is string && data.longDescription.size() <= 5000 &&
+             data.date is string && data.date.size() <= 32 &&
+             data.location is string && data.location.size() <= 200 &&
+             data.imageUrl is string && data.imageUrl.size() <= 2048 &&
+             (data.themeColor == 'cyan' || data.themeColor == 'pink' || data.themeColor == 'purple');
+    }
+
+    // Rules for Events collection
+    match /events/{eventId} {
+      // Public-facing Archive Feed can list and read events
+      allow read: if true;
+
+      // Mutations (creation, update, deletions) are permitted ONLY for verified admins
+      allow create: if isAdmin() && isValidId(eventId) && isValidEvent(incoming());
+      
+      allow update: if isAdmin() && 
+                    isValidId(eventId) && 
+                    isValidEvent(incoming()) && 
+                    incoming().id == existing().id;
+
+      allow delete: if isAdmin() && isValidId(eventId);
+    }
+  }
+}

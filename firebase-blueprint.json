@@ -1,0 +1,55 @@
+{
+  "entities": {
+    "Event": {
+      "title": "Event",
+      "description": "An event item in the SHANMUKA EVENTS CMS",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier of the event"
+        },
+        "title": {
+          "type": "string",
+          "description": "The title of the event"
+        },
+        "headline": {
+          "type": "string",
+          "description": "A short, catchy line showing key aspects of the event"
+        },
+        "description": {
+          "type": "string",
+          "description": "A brief overview description of the event"
+        },
+        "longDescription": {
+          "type": "string",
+          "description": "A detailed description in the modal"
+        },
+        "date": {
+          "type": "string",
+          "description": "The date of the event in YYYY-MM-DD"
+        },
+        "location": {
+          "type": "string",
+          "description": "The location / venue of the celebration"
+        },
+        "imageUrl": {
+          "type": "string",
+          "description": "URL of the uploaded photo or video"
+        },
+        "themeColor": {
+          "type": "string",
+          "description": "Theme accent color: cyan, pink, or purple",
+          "enum": ["cyan", "pink", "purple"]
+        }
+      },
+      "required": ["id", "title", "headline", "description", "longDescription", "date", "location", "imageUrl", "themeColor"]
+    }
+  },
+  "firestore": {
+    "events/{eventId}": {
+      "schema": "Event",
+      "description": "Past and active events displayed in the archive gallery"
+    }
+  }
+}

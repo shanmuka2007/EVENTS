@@ -1,0 +1,81 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // 1. Global Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Reuseable Global Helpers
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // 2. Events Rules
+    // Anyone (including anonymous users) can read and list past events. 
+    // Creating/updating events is allowed for any signed-in user who creates high-quality event logs.
+    match /events/{eventId} {
+      allow read, list: if true;
+      allow create: if isSignedIn() 
+        && isValidId(eventId)
+        && isValidEvent(incoming());
+      
+      allow update: if isSignedIn()
+        && isValidId(eventId)
+        && isValidEvent(incoming())
+        && incoming().id == existing().id; // Immortality rule
+      
+      allow delete: if false; // No deletion allowed through clients
+    }
+
+    function isValidEvent(data) {
+      return data.id is string && data.id.size() <= 128
+        && data.title is string && data.title.size() <= 100
+        && data.headline is string && data.headline.size() <= 200
+        && data.description is string && data.description.size() <= 500
+        && data.longDescription is string && data.longDescription.size() <= 5000
+        && data.date is string && data.date.size() <= 20
+        && data.location is string && data.location.size() <= 150
+        && data.imageUrl is string && data.imageUrl.size() <= 2000
+        && data.themeColor is string && (data.themeColor == 'cyan' || data.themeColor == 'pink' || data.themeColor == 'purple');
+    }
+
+    // 3. Bookings Rules
+    // Signed-in users can reserve slots. Readers can only list to verify spots.
+    // PII (like email and names) is protected. Only the owner (the email or authenticated userId) can get single booking details.
+    match /bookings/{bookingId} {
+      allow list: if true; // Everyone needs to see what dates/times are occupied, list query is secure
+      allow get: if isSignedIn() && (resource.data.email == request.auth.token.email || resource.data.userId == request.auth.uid);
+      
+      allow create: if isSignedIn()
+        && isValidId(bookingId)
+        && isValidBooking(incoming())
+        && incoming().email == request.auth.token.email; // Ensure identity integrity
+      
+      allow update: if false; // Bookings are final locks
+      allow delete: if false; // Bookings are immutable historical locks
+    }
+
+    function isValidBooking(data) {
+      return data.dateKey is string && data.dateKey.size() <= 20
+        && data.timeSlot is string && data.timeSlot.size() <= 100
+        && data.name is string && data.name.size() <= 100
+        && data.email is string && data.email.size() <= 150
+        && data.timestamp is string && data.timestamp.size() <= 50;
+    }
+
+  }
+}

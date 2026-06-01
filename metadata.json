@@ -1,0 +1,6 @@
+{
+  "name": "Shanmuka Events",
+  "description": "Premium Cosmic-Royal Indian wedding registry and high-frequency space-time ceremony planner.",
+  "requestFramePermissions": ["camera", "microphone", "geolocation"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
